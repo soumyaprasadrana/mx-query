@@ -1,0 +1,7 @@
+<svg width="440" height="120" viewBox="0 0 440 120" xmlns="http://www.w3.org/2000/svg" role="img">
+  <title>mxQuery</title>
+  <desc>mxQuery wordmark for light backgrounds: Iris violet rounded-square badge with mxQ in on-accent, then mxQuery in violet and Iris ink.</desc>
+  <rect x="20" y="20" width="80" height="80" rx="20" fill="#7C3AED"/>
+  <text x="60" y="70" font-family="'Inter', 'Segoe UI', ui-sans-serif, system-ui, sans-serif" font-size="22" font-weight="700" fill="#F8F5FF" text-anchor="middle" letter-spacing="-0.5">mxQ</text>
+  <text x="118" y="76" font-family="'Inter', 'Segoe UI', ui-sans-serif, system-ui, sans-serif" font-size="48" font-weight="700" fill="#7C3AED">mx<tspan fill="#1A1228" font-weight="500">Query</tspan></text>
+</svg>

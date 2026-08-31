@@ -1,11 +1,57 @@
 {
   "name": "maximo-mcp-oslc-query-builder-frontend",
-  "version": "0.1.0",
-  "private": true,
-  "description": "React frontend for the Maximo OSLC query builder — calls MCP tools via the backend proxy, no client-side OSLC logic",
+  "private": false,
+  "version": "1.2.0",
   "type": "module",
+  "description": "mxQuery frontend - Maximo OSLC query studio. Calls MCP tools via the backend proxy, no client-side OSLC logic.",
+  "keywords": [
+    "maximo",
+    "ibm-maximo",
+    "oslc",
+    "mcp",
+    "model-context-protocol",
+    "query-builder",
+    "eam",
+    "react",
+    "typescript"
+  ],
+  "author": "Soumya Prasad Rana",
+  "license": "Apache-2.0",
+  "homepage": "https://soumyaprasadrana.github.io/mx-query/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/soumyaprasadrana/mx-query.git"
+  },
+  "bugs": {
+    "url": "https://github.com/soumyaprasadrana/mx-query/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "dev": "echo 'Phase 2: not scaffolded yet — see docs/ROADMAP.md'",
-    "build": "echo 'Phase 2: not scaffolded yet — see docs/ROADMAP.md'"
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^7.3.1",
+    "@fortawesome/free-solid-svg-icons": "^7.3.1",
+    "@fortawesome/react-fontawesome": "^3.5.0",
+    "driver.js": "^1.8.0",
+    "framer-motion": "^11.18.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.15.4"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "happy-dom": "^20.12.0",
+    "typescript": "^5.5.3",
+    "vite": "^5.4.0",
+    "vitest": "^4.1.11"
   }
 }

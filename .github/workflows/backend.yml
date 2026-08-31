@@ -1,0 +1,33 @@
+# Backend CI — ruff + pytest against a scratch tenant db, never a real one
+# (AGENTS.md rule 6 applies to CI too — MQB_TENANT_DB_PATH always points at
+# the runner's own temp dir, set once here rather than per-test).
+name: backend
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+
+defaults:
+  run:
+    working-directory: backend
+
+env:
+  MQB_TENANT_DB_PATH: ${{ runner.temp }}/mqb-ci-tenants.db
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: ruff check app tests
+      - run: pytest -q

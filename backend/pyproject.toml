@@ -1,13 +1,58 @@
 [project]
 name = "maximo-mcp-oslc-query-builder-backend"
-version = "0.1.0"
+version = "1.2.0"
 description = "Multi-tenant MCP tool-call proxy backend for the Maximo OSLC query builder"
+authors = [{ name = "Soumya Prasad Rana" }]
+keywords = ["maximo", "ibm-maximo", "oslc", "mcp", "model-context-protocol", "query-builder", "eam", "fastapi"]
+license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi",
-    "uvicorn[standard]",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "mcp>=1.0",
+    "cryptography>=42.0",
+    "httpx>=0.27",
+    "litellm>=1.55",
 ]
+
+[project.urls]
+Homepage = "https://soumyaprasadrana.github.io/mx-query/"
+Repository = "https://github.com/soumyaprasadrana/mx-query"
+Issues = "https://github.com/soumyaprasadrana/mx-query/issues"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "ruff>=0.6"]
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+# Explicit, not auto-discovery: without this, setuptools' flat-layout
+# scan trips over the runtime `data/` dir (created at startup for the
+# sqlite tenant registry + per-tenant MCP data/logs) and refuses to build,
+# seeing two "top-level packages". Only `app` is ever a real package here.
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+# Start narrow (unused imports/vars, bare excepts) rather than opinionated
+# style rules — this codebase has an established voice (long docstrings,
+# specific comment style) that a default-strict ruff config would fight.
+select = ["F", "E9", "B"]
+
+[tool.ruff.lint.flake8-bugbear]
+# B008 ("no function calls in defaults") doesn't know about FastAPI's
+# Depends/Query/Body, which are DESIGNED to be called as a route's default
+# argument — that's how FastAPI's dependency injection works. Every FastAPI
+# route in this codebase uses this pattern; it's idiomatic, not a bug.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Body"]

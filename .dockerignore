@@ -1,0 +1,28 @@
+# Never needed inside the image — the app doesn't read any of this at runtime.
+.git/
+.github/
+docs/
+AGENTS.md
+*.md
+!README.md
+
+# Regenerable / huge — reinstalled fresh in the build stages.
+backend/.venv/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/.pytest_cache/
+backend/.ruff_cache/
+frontend/node_modules/
+frontend/dist/
+
+# Real state — never bake tenant data or secrets into an image layer.
+backend/data/
+.env
+.env.*
+!.env.example
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

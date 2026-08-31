@@ -1,52 +1,140 @@
-# Maximo MCP OSLC Query Builder
+# mxQuery
 
-A visual OSLC query builder for IBM Maximo, built directly on top of
-[`maximo-mcp-server`](https://github.com/soumyaprasadrana/maximo-mcp-server) — no
-bespoke REST backend re-implementing Maximo query logic. The Python backend is a
-thin, multi-tenant **MCP tool-call proxy**: it spawns and owns one `maximo-mcp-server`
-stdio process per configured tenant and exposes its tools to the React frontend over
-HTTP. The frontend never re-implements OSLC URL construction, metadata resolution, or
-filtering semantics — it calls MCP tools and renders what comes back.
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="frontend/public/logo-dark.svg" />
+    <img src="frontend/public/logo-light.svg" alt="mxQuery" width="440" height="120" />
+  </picture>
+</p>
 
-This is a from-scratch, MCP-native rebuild of the ideas in the (Carbon + bespoke-REST)
-`maximo-oslc-builder` prototype — same feature set (field/child-field selection, WHERE
-+ child-WHERE builders, saved queries with dynamic params, sorting, a live URL
-preview, results grid, an AI copilot panel, a form builder) — rewired to speak MCP
-tool calls end to end, and to pick up `maximo-mcp-server`'s 1.7.0 correctness fixes
-(nested-relationship `childOptions` filtering) that the prototype predates.
+<p align="center">
+  Visual OSLC query studio for IBM Maximo.
+</p>
 
-## Status
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="Apache-2.0" /></a>
+  <a href="backend/pyproject.toml"><img src="https://img.shields.io/badge/python-3.11%2B-3776AB.svg" alt="Python 3.11+" /></a>
+  <a href="frontend/package.json"><img src="https://img.shields.io/badge/node-20%2B-339933.svg" alt="Node 20+" /></a>
+  <a href="https://github.com/soumyaprasadrana/mx-query/actions/workflows/frontend.yml"><img src="https://github.com/soumyaprasadrana/mx-query/actions/workflows/frontend.yml/badge.svg" alt="Frontend CI" /></a>
+  <a href="https://github.com/soumyaprasadrana/mx-query/actions/workflows/backend.yml"><img src="https://github.com/soumyaprasadrana/mx-query/actions/workflows/backend.yml/badge.svg" alt="Backend CI" /></a>
+  <a href="https://soumyaprasadrana.github.io/mx-query/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-7C3AED.svg" alt="Documentation" /></a>
+</p>
 
-**Planning stage.** This repo currently holds project/architecture docs and a
-scaffold only — see [`docs/pm/STATUS.md`](docs/pm/STATUS.md) for exactly what
-exists vs. what's next, and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the phased
-build plan. Implementation starts in a follow-up session.
-
-## The pitch, in one architecture line
+Connect a Maximo instance, pick an object structure, add fields and filters, and run the query. The browser talks to [`maximo-mcp-server`](https://github.com/soumyaprasadrana/maximo-mcp-server) through a small Python proxy. It does not rebuild Maximo's query language in JavaScript.
 
 ```
-React frontend  --HTTP-->  Python backend (per-tenant MCP client pool)  --stdio-->  maximo-mcp-server (per tenant)  --HTTPS-->  Maximo
+Browser  →  mxQuery (UI + MCP proxy)  →  maximo-mcp-server  →  Maximo
 ```
 
-A "tenant" = one Maximo instance (`url` + `apiKey`), configured once via the frontend's
-startup screen, held server-side, and used to spawn a dedicated `maximo-mcp-server`
-process with its own metadata sync directory. The backend polls the server's own
-`mcp_server_status` tool until the initial metadata sync completes (the same warmup-gate
-pattern already proven in the sibling `maximo-playbook-platform` project) before
-reporting the tenant ready.
+**Docs:** [User guide](https://soumyaprasadrana.github.io/mx-query/) · [Install](https://soumyaprasadrana.github.io/mx-query/getting-started) · [Architecture](https://soumyaprasadrana.github.io/mx-query/architecture)
 
-Full design: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Decisions and their
-reasoning: [`docs/DECISIONS.md`](docs/DECISIONS.md).
+## Features
+
+- **Wizard** — one question at a time from intent to a runnable query
+- **Builder** — object-structure search, parent and child columns, WHERE, nested child-row filters, sort, execute, import of tool-call JSON or an OSLC GET
+- **Saved queries** — folders, tags, and open in builder, results, or a report view (per tenant)
+- **Assist (optional)** — suggests names from the live tenant catalog only; off until an admin configures an LLM provider. Use a real provider, not the local default — see [Configuration](#configuration)
+- **Multi-tenant** — each Maximo URL + API key is a tenant, with its own MCP process and metadata sync
+- **Read-only by default** — write / form designer is not in this release
+
+Not in this release: nested `childSelects` / `rel.` column picking, and create/update (Form Builder).
+
+## Quick start
+
+You need a Maximo instance reachable over HTTPS and an API key for that instance.
+
+### Docker
+
+```bash
+git clone https://github.com/soumyaprasadrana/mx-query.git
+cd mxquery
+cp .env.example .env
+docker compose up --build
+```
+
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). Set `MQB_SESSION_ENCRYPTION_KEY` in `.env` for anything that is not a throwaway local try.
+
+Persistent state (tenant registry, encrypted keys, synced metadata) lives in the `mxquery-data` volume. `docker compose down` keeps it; `docker compose down -v` deletes it.
+
+The image includes Python **and** Node: `maximo-mcp-server` is spawned per tenant with `npx` at runtime.
+
+### From source
+
+Node 20+ and Python 3.11+.
+
+```bash
+git clone https://github.com/soumyaprasadrana/mx-query.git
+cd mxquery
+./start.ps1     # Windows PowerShell
+./start.sh      # macOS / Linux / Git Bash
+```
+
+That builds the UI and starts the backend, which serves it on port 8000. API docs: `/api/docs`.
+
+Frontend-only, with a backend already on `:8000`:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Do not start a second backend against the same tenant data directory.
+
+## First run
+
+1. **Connect a tenant** — name, Maximo URL (for example `https://your-host/maximo`), API key. Read-only is on by default.
+2. **Wait for warmup** — object-structure metadata syncs once. The query UI waits until that finishes.
+3. **Home** — Wizard, Builder, or Saved Queries.
+
+| Path | Screen |
+|---|---|
+| `/` | Home, or the tenant picker if this browser has no session |
+| `/setup` | New Maximo connection |
+| `/wizard` | Guided query |
+| `/builder` | Query builder |
+| `/builder/report` | Saved-query report |
+| `/library` | Saved queries |
+
+Tenant id stays in `localStorage` (`mqb.tenantId`). It is a session, not a shareable link.
+
+## Configuration
+
+Environment variables use the `MQB_` prefix. Local defaults work for a first run. Full table: [Configuration](https://soumyaprasadrana.github.io/mx-query/configuration).
+
+| Variable | Default | What it does |
+|---|---|---|
+| `MQB_SESSION_ENCRYPTION_KEY` | machine-derived | AES-256-GCM key for tenant API keys at rest. Set this on any shared host. |
+| `MQB_ADMIN_PASSWORD` | unset | Gates Settings (LLM, theme). Blank disables the login screen entirely. |
+| `MQB_LLM_MODEL` | `ollama/qwen2.5:1.5b` | Deploy-time default for Assist ([litellm](https://github.com/BerriAI/litellm) model string). Zero-setup only — too weak to give good picks. Use `openai/gpt-4o-mini` or similar for Assist to actually be worth turning on. |
+| `MQB_LLM_API_KEY` / `MQB_LLM_API_BASE` | unset / `http://127.0.0.1:11434` | Provider credentials / endpoint when needed |
+| `MQB_MCP_NPM_SPEC` | pinned `maximo-mcp-server` | Override the MCP server package for local testing |
+| `MQB_TENANT_DB_PATH` | `./data/tenants.db` | Tenant registry + LLM/theme config (sqlite) |
+
+`GET /api/version` returns `{ name, version, mcpServer }` — product semver and the pinned MCP npm spec.
+
+**Do not point `MQB_TENANT_DB_PATH` at a live `tenants.db` when running tests or ad-hoc scripts.** That file holds encrypted Maximo keys and admin LLM config. Use a scratch path; see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+From Docker, `127.0.0.1` is the container. Ollama on the host needs `host.docker.internal` (`docker-compose.yml` already sets this up).
 
 ## Repository layout
 
 ```
-backend/    Python (FastAPI) — tenant registry, per-tenant MCP client pool, tool-call proxy
-frontend/   React + TypeScript — query builder UI, MCP-tool-call client (no OSLC logic)
-docs/       Architecture, decisions, roadmap, PM tracking (see docs/pm/)
+backend/     FastAPI proxy — tenants, MCP pool, tool-call forwarder
+frontend/    React + TypeScript UI (no OSLC construction)
+docs-site/   Public user guide (VitePress → GitHub Pages)
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Pull requests that add bespoke query endpoints (`/query`, `/os/:name/schema`, …) or that reconstruct OSLC in the browser will be asked to rework: every schema and execute path is `POST /api/tenants/{id}/tools/{toolName}`.
+
+## Security
+
+This app stores Maximo API keys (and an optional LLM key) encrypted at rest. Please report vulnerabilities privately — see [SECURITY.md](SECURITY.md).
 
 ## License
 
-Apache-2.0 — see [`LICENSE`](LICENSE). Contributions welcome — see
-[`CONTRIBUTING.md`](CONTRIBUTING.md).
+Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+Copyright © 2026 Soumya Prasad Rana.
