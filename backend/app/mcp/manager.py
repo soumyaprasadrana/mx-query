@@ -87,7 +87,17 @@ def parse_status(snapshot: Any) -> tuple[int | None, bool, str | None, float | N
     object_structures = _dig(snapshot, ("object_structures",))
     in_progress = _dig(snapshot, ("inProgress", "in_progress"))
     stage = _dig(snapshot, ("currentStageName", "currentStage", "stage"))
-    pct = _dig(snapshot, ("progress", "percentage", "percent", "pct"))
+    # The real field is `sync.progress.percentComplete` (confirmed straight
+    # from the package README's own worked example: "mcp_server_status --
+    # read sync.currentStageName, sync.progress.percentComplete"), NOT a flat
+    # `progress` number. `_dig` matches the FIRST key present with a non-None
+    # value at each level without looking inside it — `sync` itself has a
+    # `progress` key (the nested {percentComplete, ...} object), so including
+    # "progress" here would match that wrapper object first and always win
+    # before recursion ever reached percentComplete. float(dict) then raises,
+    # is swallowed by the try/except below, and percentage silently stays
+    # None for the entire sync. Search for percentComplete directly instead.
+    pct = _dig(snapshot, ("percentComplete", "percent", "pct"))
     try:
         os_count = int(object_structures) if object_structures is not None else None
     except (TypeError, ValueError):
@@ -319,6 +329,18 @@ class TenantMcpManager:
                 return status
 
             deadline = started + settings.mcp_warmup_timeout_s
+            # A large Maximo instance can legitimately spend 20-30+ minutes in
+            # "Loading schemas" (one HTTP request per object structure) — a
+            # flat timeout either breaks large tenants or has to be set
+            # absurdly high for everyone. Track the last time the snapshot
+            # actually CHANGED (stage, count, or percentage) instead, and only
+            # error out once nothing has moved for mcp_warmup_stall_timeout_s
+            # — that's a real hang (bad creds, dead network, server crash),
+            # not just a slow-but-working sync. mcp_warmup_timeout_s is still
+            # an outer sanity ceiling for the pathological case of a sync
+            # that keeps reporting *some* change forever without finishing.
+            last_progress_at = started
+            last_snapshot: tuple[Any, Any, Any] | None = None
             while True:
                 try:
                     snapshot = await loader.server_status()
@@ -338,10 +360,25 @@ class TenantMcpManager:
                     logger.info("metadata_ready tenant=%s object_structures=%d", tenant_id, os_count)
                     return status
 
+                now = time.perf_counter()
+                current_snapshot = (stage, os_count, pct)
+                if current_snapshot != last_snapshot:
+                    last_snapshot = current_snapshot
+                    last_progress_at = now
+
                 status.message = f"Syncing metadata{f' ({stage})' if stage else ''}"
-                if time.perf_counter() >= deadline:
+                stalled_for = now - last_progress_at
+                if stalled_for >= settings.mcp_warmup_stall_timeout_s:
                     status.state = ERROR
-                    status.message = f"Metadata sync timed out after {settings.mcp_warmup_timeout_s}s"
+                    status.message = (
+                        f"Metadata sync appears stuck: no progress for {stalled_for:.0f}s"
+                        f"{f' (stage: {stage})' if stage else ''}"
+                    )
+                    logger.error("metadata_stalled tenant=%s stalled_for=%.0f", tenant_id, stalled_for)
+                    return status
+                if now >= deadline:
+                    status.state = ERROR
+                    status.message = f"Metadata sync exceeded the {settings.mcp_warmup_timeout_s:.0f}s outer limit"
                     logger.error("metadata_timeout tenant=%s", tenant_id)
                     return status
                 await asyncio.sleep(3)

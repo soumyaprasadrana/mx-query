@@ -11,6 +11,8 @@ Environment variables, prefix `MQB_`. Local defaults work for a first run. Set `
 | `MQB_LLM_API_KEY` | unset | API key for the provider above, if it needs one |
 | `MQB_LLM_API_BASE` | `http://127.0.0.1:11434` | Provider endpoint — only relevant for local/self-hosted providers like Ollama |
 | `MQB_MCP_NPM_SPEC` | a pinned `maximo-mcp-server` version | Override for testing against a different build |
+| `MQB_MCP_WARMUP_STALL_TIMEOUT_S` | `300` | The real guard on first-time metadata sync: errors out only once the sync reports no change (same stage/count/percentage) for this long — a genuine hang, not just a slow instance |
+| `MQB_MCP_WARMUP_TIMEOUT_S` | `7200` | An outer sanity ceiling on top of the stall guard, in case a sync somehow keeps reporting *some* change forever without finishing. Raise it if a real environment's total sync time (not stall time) legitimately exceeds 2 hours |
 
 An admin can override the LLM provider at runtime from the Settings screen
 without touching any of these — the env vars above are just the deploy-time

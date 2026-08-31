@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.2.3
+
+- Fix: warmup progress `percentage` was always `null`. The real field is
+  `sync.progress.percentComplete` (a nested object) — the status parser
+  matched the wrapper `progress` key itself first and silently dropped it
+  on the `float()` conversion
+- Fix: first-time metadata sync used one flat 600s timeout regardless of
+  Maximo instance size, so any large environment (schema loading is one
+  HTTP request per object structure) got killed mid-sync. Replaced with a
+  stall detector — errors out only once the sync reports no change for
+  `MQB_MCP_WARMUP_STALL_TIMEOUT_S` (default 300s) — plus a generous outer
+  ceiling `MQB_MCP_WARMUP_TIMEOUT_S` (default 7200s) as a last resort, both
+  configurable via env
+- Docs: honest sync-time expectation on the warmup screen ("20-30+ minutes
+  on large environments" instead of "a few minutes")
+
 ## 1.2.2
 
 - Fix: connecting a tenant against the published Docker image failed —

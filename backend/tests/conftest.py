@@ -77,7 +77,14 @@ def fake_mcp_client(monkeypatch):
             pass
 
         async def server_status(self):
-            return {"object_structures": 7, "inProgress": False, "currentStageName": "done", "progress": 100}
+            # Real shape: sync.progress is {percentComplete, ...}, not a
+            # flat number (see app/mcp/manager.py's parse_status).
+            return {
+                "object_structures": 7,
+                "inProgress": False,
+                "currentStageName": "done",
+                "progress": {"percentComplete": 100},
+            }
 
         async def call_tool(self, name, args):
             return {"tool": name, "args": args, "op_success": True}

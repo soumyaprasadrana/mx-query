@@ -92,7 +92,7 @@ export default function Warmup({
         <p className="muted" style={{ marginTop: 0 }}>
           {variant === "resync"
             ? "Full metadata re-sync against Maximo. This tenant's live connection is briefly disconnected."
-            : "First-time metadata sync - this can take a few minutes on large environments."}
+            : "First-time metadata sync - a few minutes on small environments, 20-30+ on large ones (this fetches a schema per object structure)."}
         </p>
         <div className="progress-track">
           <div

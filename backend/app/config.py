@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     # `app_name` is public-facing now (GET /api/version, shown in the UI) —
     # the product's actual name, not the internal package/repo name.
     app_name: str = "mxQuery"
-    app_version: str = "1.2.2"
+    app_version: str = "1.2.3"
     api_prefix: str = "/api"
     serve_frontend: bool = True
 
@@ -46,7 +46,20 @@ class Settings(BaseSettings):
     # Escape hatch for local dev: `node <mcp_cli_path> <flags>` instead of npx.
     mcp_cli_path: str = ""
 
-    mcp_warmup_timeout_s: float = 600.0
+    # Two different guards on the metadata-sync wait loop (manager.py's
+    # _load): mcp_warmup_stall_timeout_s is the one that actually matters day
+    # to day — error out only once the sync has reported no change (same
+    # stage, object count, and percentage) for this long, which is a real
+    # sign it's stuck regardless of how large the tenant's Maximo instance
+    # is. mcp_warmup_timeout_s is just an outer sanity ceiling for a sync
+    # that's "progressing" but absurdly slowly or never actually finishing;
+    # kept generous (2h) rather than tuned to any one deployment's data
+    # volume, since "Loading schemas" is a linear per-object-structure fetch
+    # (see the package README's sync-stages table) and genuinely takes 20-30+
+    # minutes on a large instance. Both override via env if even these aren't
+    # enough for a given deployment.
+    mcp_warmup_timeout_s: float = 7200.0
+    mcp_warmup_stall_timeout_s: float = 300.0
     # Idle-reap window for warm per-tenant clients. Tenants are fewer and
     # longer-lived than playbook-platform's per-user sessions, so this defaults
     # higher than that project's per-user value (see docs/pm/BACKLOG.md).
