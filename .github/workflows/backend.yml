@@ -20,8 +20,6 @@ defaults:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      MQB_TENANT_DB_PATH: ${{ runner.temp }}/mqb-ci-tenants.db
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -30,3 +28,5 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: ruff check app tests
       - run: pytest -q
+        env:
+          MQB_TENANT_DB_PATH: ${{ runner.temp }}/mqb-ci-tenants.db
