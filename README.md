@@ -45,6 +45,17 @@ You need a Maximo instance reachable over HTTPS and an API key for that instance
 
 ### Docker
 
+Published image, no clone needed:
+
+```bash
+docker run -d --name mxquery -p 8000:8000 \
+  -e MQB_SESSION_ENCRYPTION_KEY=change-me \
+  -v mxquery-data:/data \
+  soumyaprasadrana/mx-query:latest
+```
+
+Or build from source:
+
 ```bash
 git clone https://github.com/soumyaprasadrana/mx-query.git
 cd mxquery
@@ -52,7 +63,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000). Set `MQB_SESSION_ENCRYPTION_KEY` in `.env` for anything that is not a throwaway local try.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). Set `MQB_SESSION_ENCRYPTION_KEY` to a real value for anything that is not a throwaway local try. Full options, including a no-clone `docker-compose.yml`: [Install](https://soumyaprasadrana.github.io/mx-query/getting-started).
 
 Persistent state (tenant registry, encrypted keys, synced metadata) lives in the `mxquery-data` volume. `docker compose down` keeps it; `docker compose down -v` deletes it.
 

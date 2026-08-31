@@ -17,12 +17,11 @@ defaults:
   run:
     working-directory: backend
 
-env:
-  MQB_TENANT_DB_PATH: ${{ runner.temp }}/mqb-ci-tenants.db
-
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      MQB_TENANT_DB_PATH: ${{ runner.temp }}/mqb-ci-tenants.db
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

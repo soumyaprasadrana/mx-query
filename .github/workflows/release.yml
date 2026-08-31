@@ -65,7 +65,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Docker metadata (semver tags from the git tag: 1.2.0, 1.2, 1, latest)
+      - name: "Docker metadata (semver tags from the git tag: 1.2.0, 1.2, 1, latest)"
         id: meta
         uses: docker/metadata-action@v5
         with:
