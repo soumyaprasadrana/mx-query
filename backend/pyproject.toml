@@ -1,6 +1,6 @@
 [project]
 name = "maximo-mcp-oslc-query-builder-backend"
-version = "1.2.3"
+version = "1.3.0"
 description = "Multi-tenant MCP tool-call proxy backend for the Maximo OSLC query builder"
 authors = [{ name = "Soumya Prasad Rana" }]
 keywords = ["maximo", "ibm-maximo", "oslc", "mcp", "model-context-protocol", "query-builder", "eam", "fastapi"]
@@ -16,6 +16,9 @@ dependencies = [
     "httpx>=0.27",
     "litellm>=1.55",
 ]
+
+[project.scripts]
+mxquery-cli = "app.cli:main"
 
 [project.urls]
 Homepage = "https://soumyaprasadrana.github.io/mx-query/"

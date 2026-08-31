@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.3.0
+
+- Add a standalone CLI (`python -m app.cli`, also installed as
+  `mxquery-cli`) for `add-tenant`, `resync`, and `list-tenants` — runs the
+  same metadata-sync loop the web UI drives, in the foreground, printing
+  progress until it finishes. No HTTP request lifecycle involved, so a
+  large Maximo instance's first-time sync isn't tied to a browser tab or
+  any request timeout. Point it at the same `mxquery-data` volume as a
+  running container and the running server picks up the result on its next
+  status check, no restart needed
+- `db.py`'s sqlite connection now sets WAL journal mode and a 30s busy
+  timeout, needed once the CLI and the running server can open the same
+  tenant db file from two separate processes at once
+
 ## 1.2.3
 
 - Fix: warmup progress `percentage` was always `null`. The real field is

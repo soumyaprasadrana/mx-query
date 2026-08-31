@@ -129,12 +129,21 @@ class Tenant:
 def _connect() -> sqlite3.Connection:
     path = Path(get_settings().tenant_db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path)
+    # `timeout` (seconds sqlite retries before raising "database is locked")
+    # and WAL journal mode both matter once app/cli.py exists: a CLI
+    # invocation and the running server can now open this same file from two
+    # separate OS processes at once. WAL lets readers proceed without
+    # blocking on a writer; the raised timeout absorbs the brief window where
+    # both processes want to write at the same instant. A no-op to set on
+    # every connect once the file is already in WAL mode.
+    conn = sqlite3.connect(path, timeout=30.0)
     conn.row_factory = sqlite3.Row
     # sqlite ignores FK constraints unless enabled per-connection — needed for
     # saved_queries'/saved_query_folders' ON DELETE CASCADE/SET NULL to
     # actually fire (see MQB-010; no other table declares FKs).
     conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 30000")
     return conn
 
 

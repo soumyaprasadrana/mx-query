@@ -37,6 +37,26 @@ Desktop on Mac/Windows provides it natively).
 Builds the frontend once, then starts the backend, which serves the built
 UI — one process, one port.
 
+## Adding or resyncing a tenant from the CLI
+
+First-time metadata sync on a large Maximo instance (schema loading is one
+HTTP request per object structure) can take well past 20-30 minutes. Doing
+that through the web UI works — the sync isn't bound to the request, only
+progress polling is — but a terminal you can walk away from is often more
+convenient than a browser tab. `app.cli` runs the exact same sync loop the
+web UI drives, in the foreground, printing progress until it finishes:
+
+```bash
+docker run --rm -v mxquery-data:/data soumyaprasadrana/mx-query:latest \
+  python -m app.cli add-tenant --name "Prod" --url https://host/maximo --api-key ...
+```
+
+Mounting the same `mxquery-data` volume as your running container means it
+writes into the exact same tenant registry and per-tenant data directory —
+the running server picks up the result the next time it checks that
+tenant's status, no restart needed. Also available: `resync <tenant-id>`
+(force a full re-sync of an existing tenant) and `list-tenants`.
+
 ## No long-lived background process per tenant
 
 Each tenant's `maximo-mcp-server` process is spawned on demand and reaped

@@ -35,6 +35,7 @@ Browser  →  mxQuery (UI + MCP proxy)  →  maximo-mcp-server  →  Maximo
 - **Saved queries** — folders, tags, and open in builder, results, or a report view (per tenant)
 - **Assist (optional)** — suggests names from the live tenant catalog only; off until an admin configures an LLM provider. Use a real provider, not the local default — see [Configuration](#configuration)
 - **Multi-tenant** — each Maximo URL + API key is a tenant, with its own MCP process and metadata sync
+- **CLI tenant management** — `python -m app.cli add-tenant`/`resync` sync a tenant to completion outside the web UI, useful for a large Maximo instance's first-time sync — see [Deployment](https://soumyaprasadrana.github.io/mx-query/deployment)
 - **Read-only by default** — write / form designer is not in this release
 
 Not in this release: nested `childSelects` / `rel.` column picking, and create/update (Form Builder).
