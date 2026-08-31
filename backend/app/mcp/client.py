@@ -20,6 +20,14 @@ for relationship-inheritance walks (SR → TICKET); `1.4.4` added
 value filter — `childOptions[].domaininternalwhere` already existed
 child-scoped); `1.4.6` is a docs-only patch (no tool/schema change).
 
+Spawn target (`_server_params`): a global install (`shutil.which`) is used
+directly when present — the Docker image `npm install -g`s the pinned spec
+at build time for exactly this — falling back to on-demand `npx -y <spec>`
+for from-source runs with no global install. Never rely on npx alone in a
+container: it re-resolves and rebuilds `better-sqlite3`'s native module
+from a cold cache on every single spawn, which is slow even when it works
+and fails outright on a runtime image with no compiler toolchain.
+
 Lifecycle (unchanged from the source — this is the load-bearing part): a
 single background task (`_run`) enters both the `stdio_client` and
 `ClientSession` async contexts, signals ready, then blocks until `aclose()`
@@ -34,6 +42,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shutil
 from contextlib import AsyncExitStack
 from typing import Any, Literal
 
@@ -49,6 +58,10 @@ logger = get_logger("app.mcp")
 QueryMode = Literal["strict", "loose"]
 
 _QUERY_TOOL = "os_query_builder"
+
+# Fixed across versions (`npm view @soumyaprasadrana/maximo-mcp-server bin`) —
+# not derived from mcp_npm_spec, which carries the version.
+_MCP_BIN_NAME = "maximo-mcp-server"
 
 
 class MaximoMCPClient:
@@ -146,7 +159,18 @@ class MaximoMCPClient:
         if settings.mcp_cli_path:
             # Local dev: `node <cli.js> <flags>`.
             return StdioServerParameters(command="node", args=[settings.mcp_cli_path, *flags], env=env)
-        # Production: `npx -y <spec> <flags>` (SDK resolves npx -> npx.cmd on Windows).
+        global_bin = shutil.which(_MCP_BIN_NAME)
+        if global_bin:
+            # The Docker image `npm install -g`s this at build time (see
+            # Dockerfile) so tenants never trigger an on-demand npm/npx
+            # install at runtime — that path re-resolves and rebuilds
+            # better-sqlite3's native module from a cold cache on every
+            # spawn, which is slow and fails outright on a runtime image
+            # with no compiler toolchain.
+            return StdioServerParameters(command=global_bin, args=flags, env=env)
+        # No global install found (e.g. running from source, not Docker):
+        # fall back to on-demand resolution via npx (SDK resolves npx ->
+        # npx.cmd on Windows).
         return StdioServerParameters(command="npx", args=["-y", self.npm_spec, *flags], env=env)
 
     async def server_status(self) -> Any:

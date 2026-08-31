@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     # `app_name` is public-facing now (GET /api/version, shown in the UI) —
     # the product's actual name, not the internal package/repo name.
     app_name: str = "mxQuery"
-    app_version: str = "1.2.1"
+    app_version: str = "1.2.2"
     api_prefix: str = "/api"
     serve_frontend: bool = True
 

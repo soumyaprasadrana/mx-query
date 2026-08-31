@@ -10,9 +10,10 @@ docker compose up --build
 ```
 
 The image is a two-stage build: a Node stage compiles the frontend, and the
-runtime stage is Python **and** Node together — `maximo-mcp-server` is
-spawned per tenant via `npx` at runtime, not just used to build the UI, so
-the running container needs both.
+runtime stage is Python **and** Node together. `maximo-mcp-server` is
+installed globally at build time and spawned directly per tenant — not
+resolved via `npx` at runtime, which would redo that install (and its
+native `better-sqlite3` module build) on every tenant's first connection.
 
 All persistent state (the tenant registry, encrypted keys, and each
 tenant's synced metadata) lives in the `mxquery-data` volume.

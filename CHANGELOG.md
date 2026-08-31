@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.2
+
+- Fix: connecting a tenant against the published Docker image failed —
+  `maximo-mcp-server` was resolved via `npx` at runtime, which re-downloads
+  and rebuilds its native `better-sqlite3` dependency from a cold cache on
+  every spawn, and fails outright with no compiler toolchain on the runtime
+  image (`prebuild-install` + `node-gyp` both failing, `SIGTERM`)
+- The image now `npm install -g`s the pinned `maximo-mcp-server` at build
+  time; the backend spawns that global binary directly when present,
+  falling back to `npx` only for from-source runs with no global install
+
 ## 1.2.1
 
 - Fix `backend.yml`: `runner` context is only valid in a step's `env:`, not a job's — CI was rejecting the workflow file outright

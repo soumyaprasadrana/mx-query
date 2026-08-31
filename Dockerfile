@@ -2,8 +2,11 @@
 #
 # Two-stage build: stage 1 compiles the frontend (Node, build-time only),
 # stage 2 is the actual runtime. The runtime stage needs Node too, not just
-# Python — `maximo-mcp-server` is spawned per tenant via `npx` at RUNTIME
-# (backend/app/mcp/client.py), it's not just a frontend build tool here.
+# Python — `maximo-mcp-server` is installed globally below at BUILD time and
+# spawned directly per tenant (backend/app/mcp/client.py), not via npx. Doing
+# the npm install (and its native `better-sqlite3` module build) once here,
+# with a full toolchain and network access, avoids repeating it — slowly,
+# and without a compiler — on every tenant's first connection at runtime.
 #
 # Build from the repo root:  docker build -t mxquery .
 # Run:                       docker run -p 8000:8000 -v mxquery-data:/data mxquery
@@ -21,12 +24,20 @@ RUN npm run build
 FROM python:3.11-slim AS runtime
 
 # Node is a RUNTIME dependency here (see header) — not removed after this stage.
+# Keep MCP_NPM_SPEC in sync with backend/app/config.py's mcp_npm_spec default
+# (docs/DECISIONS.md MQB-005 has the version history).
+ARG MCP_NPM_SPEC=@soumyaprasadrana/maximo-mcp-server@1.4.6
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ca-certificates gnupg \
+    && apt-get install -y --no-install-recommends curl ca-certificates gnupg build-essential \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
-    && apt-get purge -y --auto-remove curl gnupg \
-    && rm -rf /var/lib/apt/lists/*
+    # build-essential is only for better-sqlite3's node-gyp fallback if no
+    # prebuilt binary matches this platform — a one-time build-time cost,
+    # purged below once the global install is done.
+    && npm install -g "$MCP_NPM_SPEC" \
+    && npm cache clean --force \
+    && apt-get purge -y --auto-remove curl gnupg build-essential \
+    && rm -rf /var/lib/apt/lists/* /root/.npm
 
 WORKDIR /app
 

@@ -13,7 +13,7 @@ docker run -d --name mxquery -p 8000:8000 \
   soumyaprasadrana/mx-query:latest
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The image includes Python and Node — each tenant starts `maximo-mcp-server` with `npx` at runtime. `mxquery-data` persists the tenant registry and synced metadata across restarts (`docker rm` keeps it, `docker volume rm mxquery-data` deletes it).
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The image includes Python and Node — `maximo-mcp-server` is installed globally at build time and started directly per tenant. `mxquery-data` persists the tenant registry and synced metadata across restarts (`docker rm` keeps it, `docker volume rm mxquery-data` deletes it).
 
 Or `docker-compose.yml`, without cloning the repo:
 

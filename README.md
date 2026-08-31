@@ -67,7 +67,7 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000). Set `MQB_SESSION_ENCRYPTION
 
 Persistent state (tenant registry, encrypted keys, synced metadata) lives in the `mxquery-data` volume. `docker compose down` keeps it; `docker compose down -v` deletes it.
 
-The image includes Python **and** Node: `maximo-mcp-server` is spawned per tenant with `npx` at runtime.
+The image includes Python **and** Node: `maximo-mcp-server` is installed globally at build time and spawned directly per tenant, not resolved via `npx` at runtime.
 
 ### From source
 
