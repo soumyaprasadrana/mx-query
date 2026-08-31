@@ -1,6 +1,6 @@
 [project]
 name = "maximo-mcp-oslc-query-builder-backend"
-version = "1.2.0"
+version = "1.2.1"
 description = "Multi-tenant MCP tool-call proxy backend for the Maximo OSLC query builder"
 authors = [{ name = "Soumya Prasad Rana" }]
 keywords = ["maximo", "ibm-maximo", "oslc", "mcp", "model-context-protocol", "query-builder", "eam", "fastapi"]

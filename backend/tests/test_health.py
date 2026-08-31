@@ -8,7 +8,7 @@ def test_health(client):
 def test_version_shape(client):
     body = client.get("/api/version").json()
     assert body["name"] == "mxQuery"
-    assert body["version"] == "1.2.0"
+    assert body["version"] == "1.2.1"
     # A real compatibility fact, not a guess — parsed from the same
     # MQB_MCP_NPM_SPEC the backend actually spawns tenants with.
     assert body["mcpServer"]["package"] == "@soumyaprasadrana/maximo-mcp-server"

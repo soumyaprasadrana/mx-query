@@ -1,7 +1,7 @@
 {
   "name": "maximo-mcp-oslc-query-builder-frontend",
   "private": false,
-  "version": "1.2.0",
+  "version": "1.2.1",
   "type": "module",
   "description": "mxQuery frontend - Maximo OSLC query studio. Calls MCP tools via the backend proxy, no client-side OSLC logic.",
   "keywords": [

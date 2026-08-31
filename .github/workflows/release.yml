@@ -59,6 +59,12 @@ jobs:
           npm test
           npm run build
 
+      - name: Upload frontend build for the GitHub Release
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
   docker:
     needs: validate
     runs-on: ubuntu-latest
@@ -101,7 +107,20 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend-dist
+
+      - name: Zip frontend build
+        run: |
+          cd frontend-dist
+          zip -r "../mxquery-frontend-${GITHUB_REF_NAME}.zip" .
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          files: mxquery-frontend-${{ github.ref_name }}.zip
