@@ -13,6 +13,7 @@ import WhereRow from "./WhereRow";
 import OrModeToggle from "./OrModeToggle";
 import TimelineCard from "./TimelineCard";
 import DomainInternalCard from "./DomainInternalCard";
+import ChildLimitField from "./ChildLimitField";
 import { Icon, faAsterisk, faMagnifyingGlass, faPlus, faStar, faTrashCan, faXmark } from "../Icon";
 import { mergeFieldNames, usefulOrFallback } from "../../lib/usefulFields";
 
@@ -64,6 +65,7 @@ export default function ChildWherePanel({
         </div>
         <p className="muted child-panel-hint">
           OS children omit <span className="mono">rel.</span> unless the object name matches the relationship.
+          Each hop sends childOptions.limit (50 unless you change it).
         </p>
       </div>
       <div className="stack child-panel-list" ref={listRef}>
@@ -250,6 +252,8 @@ function ChildBlock({
             />
           ))}
         </div>
+
+        <ChildLimitField hop={hop} onChange={(patch) => patchHop(hopIndex, patch)} />
 
         <div>
           <div className="spread">

@@ -75,6 +75,10 @@ export interface ChildHop {
   timeline?: TimelineQuery | null;
   /** childOptions.domaininternalwhere - internal/domain-coded values. */
   domainInternal?: DomainInternalClause[];
+  /** childOptions.limit - nested fetch cap. Default 50 (MCP warns if omitted). */
+  limit?: number;
+  /** childOptions.noLimit - unbounded nested fetch. */
+  noLimit?: boolean;
 }
 
 export interface ChildChain {

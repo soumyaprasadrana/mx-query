@@ -76,6 +76,7 @@ import WizAssistPanel from "./WizAssistPanel";
 import WizCondList from "./WizCondList";
 import TimelineCard from "../builder/TimelineCard";
 import DomainInternalCard from "../builder/DomainInternalCard";
+import ChildLimitField from "../builder/ChildLimitField";
 import WizFieldPick from "./WizFieldPick";
 import WizRelList from "./WizRelList";
 import WizTrail from "./WizTrail";
@@ -2026,6 +2027,18 @@ export default function Wizard({
                 purpose="This path filters which nested child rows load. Parent rows still return."
                 hops={hopsFromChain(filterChain.hops)}
               />
+              <ChildLimitField
+                hop={filterHop}
+                onChange={(patch) => {
+                  const chain = draft.childChains[childFilterIndex];
+                  if (!chain) return;
+                  patchChildChain(childFilterIndex, {
+                    hops: chain.hops.map((h, i) => (
+                      i === childFilterHopIndex ? { ...h, ...patch } : h
+                    )),
+                  });
+                }}
+              />
               {filterHop.conditions.some((c) => c.field) && (
                 <p className="wiz-hint">
                   Conditions here: {filterHop.conditions.filter((c) => c.field).map((c) => `${c.field} ${c.op} ${c.value}`).join(", ")}
@@ -2221,6 +2234,18 @@ export default function Wizard({
                   });
                 }}
                 orModeHint="This hop's childOptions - Maximo replaces AND with OR (opmodeor)."
+              />
+              <ChildLimitField
+                hop={filterHop}
+                onChange={(patch) => {
+                  const chain = draft.childChains[childFilterIndex];
+                  if (!chain) return;
+                  patchChildChain(childFilterIndex, {
+                    hops: chain.hops.map((h, i) => (
+                      i === childFilterHopIndex ? { ...h, ...patch } : h
+                    )),
+                  });
+                }}
               />
               <TimelineCard
                 fields={hopFields[filterHop.objectName] ?? []}

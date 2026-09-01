@@ -3,7 +3,7 @@
  * Kept mounted (paused) while other studio screens are showing so browser Back
  * restores this session; `paused` stops live-execute while hidden.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Icon, faDiagramProject, faFileImport, faFloppyDisk, faPlay } from "../Icon";
 import { callTool, getTenantStatus, patchSavedQuery, wakeTenant, SavedQueryListItem } from "../../api";
@@ -52,6 +52,7 @@ import {
   formatTlAttribute,
   timelineReady,
   serializeDomainInternal,
+  withChildOptionLimit,
 } from "../../lib/schema";
 import { fetchRelsForObject } from "../../lib/mboRels";
 import { hydrateImport, parseImport, savedParamsFromImport, searchOffFromImport, type ImportStep } from "../../lib/oslcImport";
@@ -106,6 +107,20 @@ async function paintPause() {
 }
 
 const morphEase = [0.22, 1, 0.36, 1] as const;
+const LOGIC_WIDTH_KEY = "mqb.logicWidth";
+const LOGIC_WIDTH_DEFAULT = 380;
+const LOGIC_WIDTH_MIN = 280;
+const LOGIC_WIDTH_MAX = 720;
+
+function readLogicWidth(): number {
+  try {
+    const n = Number(window.localStorage.getItem(LOGIC_WIDTH_KEY));
+    if (Number.isFinite(n) && n >= LOGIC_WIDTH_MIN && n <= LOGIC_WIDTH_MAX) return Math.round(n);
+  } catch {
+    /* ignore */
+  }
+  return LOGIC_WIDTH_DEFAULT;
+}
 
 export default function Builder({
   tenant,
@@ -190,13 +205,46 @@ export default function Builder({
   const [live, setLive] = useState(false);
   const [focusBuild, setFocusBuild] = useState(viewMode === "builder");
   const focusBuildRef = useRef(viewMode === "builder");
+  const [logicWidth, setLogicWidth] = useState(readLogicWidth);
+  const [logicDragging, setLogicDragging] = useState(false);
+  const logicWidthRef = useRef(logicWidth);
+  logicWidthRef.current = logicWidth;
+  const logicDragRef = useRef<{ startX: number; startW: number } | null>(null);
   const reduceMotion = useReducedMotion();
   const morph = reduceMotion
     ? { duration: 0 }
     : { duration: 0.55, ease: morphEase };
+  const paneMorph = logicDragging ? { duration: 0 } : morph;
   const fade = reduceMotion
     ? { duration: 0 }
     : { duration: 0.4, ease: morphEase };
+  const splitView = !focusBuild && !focusResults && !reportOnly;
+
+  function onLogicResizePointerDown(e: PointerEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    logicDragRef.current = { startX: e.clientX, startW: logicWidthRef.current };
+    setLogicDragging(true);
+  }
+
+  function onLogicResizePointerMove(e: PointerEvent<HTMLButtonElement>) {
+    const drag = logicDragRef.current;
+    if (!drag) return;
+    const body = e.currentTarget.closest(".builder-body");
+    const cap = Math.min(LOGIC_WIDTH_MAX, Math.floor((body?.clientWidth ?? 1200) * 0.62));
+    const next = Math.max(LOGIC_WIDTH_MIN, Math.min(cap, drag.startW + (e.clientX - drag.startX)));
+    setLogicWidth(next);
+  }
+
+  function onLogicResizePointerUp() {
+    logicDragRef.current = null;
+    setLogicDragging(false);
+    try {
+      window.localStorage.setItem(LOGIC_WIDTH_KEY, String(logicWidthRef.current));
+    } catch {
+      /* ignore */
+    }
+  }
 
   function morphFocus(next: boolean) {
     if (next) setFocusResults(false);
@@ -549,7 +597,9 @@ export default function Builder({
     }
     const children = childOptionsFromChains(childChains, condMode);
     if (children.length) args.childOptions = children;
-    else if (importedChildOptions?.length) args.childOptions = importedChildOptions;
+    else if (importedChildOptions?.length) {
+      args.childOptions = importedChildOptions.map(withChildOptionLimit);
+    }
     return args;
   }
 
@@ -830,7 +880,7 @@ export default function Builder({
     setDomainInternal(hydrated.domainInternal ?? []);
     setRawWhere(hydrated.rawWhere ?? null);
     setChildChains(hydrated.chains);
-    setRelatedWhere([]);
+    setRelatedWhere(hydrated.relatedWhere ?? []);
     setSortRules(hydrated.sortRules);
     setSearchTerms(hydrated.searchTerms ?? "");
     setIncludeSearchTerms(true);
@@ -847,6 +897,14 @@ export default function Builder({
     setDynValues({});
     for (const chain of hydrated.chains) {
       for (const hop of chain.hops) {
+        if (hop.objectName) {
+          void loadChildFields(hop.objectName);
+          void loadRels(hop.objectName);
+        }
+      }
+    }
+    for (const filter of hydrated.relatedWhere ?? []) {
+      for (const hop of filter.hops) {
         if (hop.objectName) {
           void loadChildFields(hop.objectName);
           void loadRels(hop.objectName);
@@ -875,7 +933,11 @@ export default function Builder({
     if (hydrated.childCollection) preview.childCollection = hydrated.childCollection;
     if (hydrated.searchTerms) preview.searchTerms = hydrated.searchTerms;
     if (hydrated.searchAttributes?.length) preview.searchAttributes = hydrated.searchAttributes;
-    if (hydrated.where.length) preview.where = { conditions: hydrated.where.map((c) => toCondition(c)) };
+    const previewWhere = [
+      ...hydrated.where.map((c) => toCondition(c)),
+      ...relatedWhereConditions(hydrated.relatedWhere ?? []),
+    ];
+    if (previewWhere.length) preview.where = { conditions: previewWhere };
     else if (hydrated.rawWhere) preview.rawWhere = hydrated.rawWhere;
     if (hydrated.orMode) preview.orMode = true;
     if (timelineReady(hydrated.timeline) && hydrated.timeline) {
@@ -889,7 +951,7 @@ export default function Builder({
     }
     const children = childOptionsFromChains(hydrated.chains);
     if (children.length) preview.childOptions = children;
-    else if (hydrated.childOptions?.length) preview.childOptions = hydrated.childOptions;
+    else if (hydrated.childOptions?.length) preview.childOptions = hydrated.childOptions.map(withChildOptionLimit);
     setBuiltArgs(preview);
     setBuiltResponse(null);
     setResultTab("call");
@@ -968,14 +1030,38 @@ export default function Builder({
     finish("select", "done", `${hydrated.extraSelect.length} nested / rel. tokens`, hydrated.selectLog);
 
     await begin("where", "Process where clause");
-    if (hydrated.where.length) {
+    const relatedLines = (hydrated.relatedWhere ?? []).flatMap((filter) => {
+      const hops = filter.hops;
+      return hops.flatMap((h, i) => {
+        const prefix = hops.slice(0, i + 1).map((x) => x.relationship).join(".");
+        return (h.conditions ?? [])
+          .filter((c) => c.field)
+          .map((c) =>
+            c.op === "isnull" || c.op === "isnotnull"
+              ? `${prefix}.${c.field} ${c.op} (related)`
+              : `${prefix}.${c.field} ${c.op} ${c.value} (related)`,
+          );
+      });
+    });
+    const whereLines = [
+      ...hydrated.where.map((c) =>
+        c.op === "isnull" || c.op === "isnotnull" ? `${c.field} ${c.op}` : `${c.field} ${c.op} ${c.value}`,
+      ),
+      ...relatedLines,
+    ];
+    if (whereLines.length) {
+      const n = hydrated.where.length;
+      const r = relatedLines.length;
       finish(
         "where",
         "done",
-        `${hydrated.where.length} condition${hydrated.where.length === 1 ? "" : "s"}`,
-        hydrated.where.map((c) =>
-          c.op === "isnull" || c.op === "isnotnull" ? `${c.field} ${c.op}` : `${c.field} ${c.op} ${c.value}`,
-        ),
+        [
+          n ? `${n} parent` : null,
+          r ? `${r} related` : null,
+        ]
+          .filter(Boolean)
+          .join(", ") || `${whereLines.length} condition${whereLines.length === 1 ? "" : "s"}`,
+        whereLines,
       );
     } else if (hydrated.rawWhere) {
       finish("where", "warn", "kept as rawWhere (could not parse)", [hydrated.rawWhere]);
@@ -1159,18 +1245,18 @@ export default function Builder({
         chrome={reportOnly ? "report" : "full"}
         title={loaded?.name}
       />
-      <div className={`builder-body${focusBuild ? " focus-build" : ""}${focusResults ? " focus-results" : ""}${reportOnly ? " report-only" : ""}`}>
+      <div className={`builder-body${focusBuild ? " focus-build" : ""}${focusResults ? " focus-results" : ""}${reportOnly ? " report-only" : ""}${logicDragging ? " logic-resizing" : ""}`}>
         <motion.aside
           className={`logic-col${live ? " live" : ""}`}
           initial={false}
           animate={{
             flexGrow: focusResults ? 0 : 1,
-            flexShrink: focusResults ? 0 : 1,
-            flexBasis: focusResults ? 44 : focusBuild ? 0 : 380,
-            maxWidth: focusResults ? 44 : focusBuild ? 9999 : 420,
-            minWidth: focusResults ? 44 : focusBuild ? 0 : 340,
+            flexShrink: focusResults ? 0 : focusBuild ? 1 : 0,
+            flexBasis: focusResults ? 44 : focusBuild ? 0 : logicWidth,
+            maxWidth: focusResults ? 44 : focusBuild ? 9999 : logicWidth,
+            minWidth: focusResults ? 44 : focusBuild ? 0 : logicWidth,
           }}
-          transition={morph}
+          transition={paneMorph}
         >
           <motion.button
             type="button"
@@ -1471,6 +1557,26 @@ export default function Builder({
                 {error ? error : execNote}
               </div>
             </div>
+          )}
+          {splitView && (
+            <button
+              type="button"
+              className={`logic-resize${logicDragging ? " dragging" : ""}`}
+              aria-label="Resize query pane"
+              title="Drag to resize the query pane. Double-click to reset."
+              onPointerDown={onLogicResizePointerDown}
+              onPointerMove={onLogicResizePointerMove}
+              onPointerUp={onLogicResizePointerUp}
+              onPointerCancel={onLogicResizePointerUp}
+              onDoubleClick={() => {
+                setLogicWidth(LOGIC_WIDTH_DEFAULT);
+                try {
+                  window.localStorage.setItem(LOGIC_WIDTH_KEY, String(LOGIC_WIDTH_DEFAULT));
+                } catch {
+                  /* ignore */
+                }
+              }}
+            />
           )}
         </motion.aside>
         <motion.main

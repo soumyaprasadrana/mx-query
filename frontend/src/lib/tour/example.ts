@@ -189,6 +189,7 @@ export const TOUR_QUERY: Record<string, unknown> = {
         conditions: [{ field: "istask", op: "=", value: "0" }],
       },
       path: ["ASSET", "ASSET_PARENT", "OPENWO"],
+      limit: 50,
     },
   ],
 };

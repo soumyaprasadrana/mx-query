@@ -33,6 +33,7 @@ export {
   faDiagramProject,
   faDownload,
   faEraser,
+  faFileExcel,
   faFileImport,
   faFilter,
   faFolder,

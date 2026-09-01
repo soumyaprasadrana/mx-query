@@ -6,6 +6,7 @@ import {
   DomainInternalClause,
   FieldInfo,
   QueryParam,
+  RelatedWhere,
   SortRule,
   TimelineQuery,
   WhereCondition,
@@ -44,6 +45,8 @@ export type ImportOk = {
   selectLog?: string[];
   chains: ChildChain[];
   where: WhereCondition[];
+  /** EXISTS hop filters unfolded from dotted parent WHERE (`asset.priority`). */
+  relatedWhere?: RelatedWhere[];
   rawWhere?: string;
   pageSize?: number;
   searchTerms?: string;
@@ -684,6 +687,9 @@ function applyChildOptionFlags(
       }
       if (!hop) continue;
       if (opt.opmodeor === true || opt.opmodeor === "true" || opt.opmodeor === 1) hop.opmodeor = true;
+      if (opt.noLimit === true || opt.noLimit === "true" || opt.noLimit === 1) hop.noLimit = true;
+      const lim = Number(opt.limit);
+      if (Number.isFinite(lim) && lim > 0) hop.limit = Math.floor(lim);
       const tl = parseTimeline(opt.tlrange, opt.tlattribute);
       if (tl) hop.timeline = tl;
       const diw = parseDomainInternal(opt.domaininternalwhere);
@@ -775,6 +781,8 @@ export function hydrateImport(
 
   applyChildOptionFlags(chains, imported.childOptions);
 
+  const unfolded = unfoldDottedWhere(imported.where, compactRels, osRels, chains, parentNames);
+
   return {
     ...imported,
     selected,
@@ -782,7 +790,97 @@ export function hydrateImport(
     extraSelect: classified.extra,
     selectLog,
     chains,
+    where: unfolded.parent,
+    relatedWhere: unfolded.related,
   };
+}
+
+/** Match a dotted-WHERE hop name against OS children, compact rels, or hops already in select. */
+function resolveWhereHop(
+  name: string,
+  compactRels: ChildRel[],
+  osRels: ChildRel[],
+  chains: ChildChain[],
+): { relationship: string; objectName: string; whereClause?: string | null } | undefined {
+  const os = matchOsChild(name, osRels);
+  if (os) return { relationship: os.relation, objectName: os.objectName, whereClause: os.whereClause };
+  const exact = matchRelExact(name, osRels) ?? matchRelExact(name, compactRels);
+  if (exact) return { relationship: exact.relation, objectName: exact.objectName, whereClause: exact.whereClause };
+  const fuzzy = matchRel(name, osRels) ?? matchRel(name, compactRels);
+  if (fuzzy) return { relationship: fuzzy.relation, objectName: fuzzy.objectName, whereClause: fuzzy.whereClause };
+  const want = name.toLowerCase();
+  for (const chain of chains) {
+    for (const hop of chain.hops) {
+      if (hop.relationship.toLowerCase() === want || hop.objectName.toLowerCase() === want) {
+        return { relationship: hop.relationship, objectName: hop.objectName, whereClause: hop.whereClause };
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Split dotted parent WHERE (`asset.priority = 2`) into related-WHERE hops.
+ * Unresolved paths stay on the parent so import never drops a condition.
+ */
+export function unfoldDottedWhere(
+  where: WhereCondition[],
+  compactRels: ChildRel[],
+  osRels: ChildRel[],
+  chains: ChildChain[],
+  parentNames: Set<string>,
+): { parent: WhereCondition[]; related: RelatedWhere[] } {
+  const parent: WhereCondition[] = [];
+  const groups = new Map<string, RelatedWhere>();
+
+  for (const cond of where) {
+    if (!cond.field.includes(".")) {
+      parent.push(cond);
+      continue;
+    }
+    if (parentNames.has(cond.field.toLowerCase())) {
+      parent.push(cond);
+      continue;
+    }
+    const parts = cond.field.split(".").filter(Boolean);
+    if (parts.length < 2) {
+      parent.push(cond);
+      continue;
+    }
+    const fieldName = parts[parts.length - 1];
+    const hopNames = parts.slice(0, -1);
+    const hops: RelatedWhere["hops"] = [];
+    let ok = true;
+    for (const hopName of hopNames) {
+      const meta = resolveWhereHop(hopName, compactRels, osRels, chains);
+      if (!meta) {
+        ok = false;
+        break;
+      }
+      hops.push({
+        relationship: meta.relationship,
+        objectName: meta.objectName,
+        whereClause: meta.whereClause,
+        conditions: [],
+      });
+    }
+    if (!ok || hops.length === 0) {
+      parent.push(cond);
+      continue;
+    }
+    const key = hops.map((h) => h.relationship.toLowerCase()).join(".");
+    let filter = groups.get(key);
+    if (!filter) {
+      filter = { hops, conditions: [] };
+      groups.set(key, filter);
+    }
+    const leaf = { ...cond, field: fieldName };
+    const last = filter.hops[filter.hops.length - 1];
+    last.conditions = [...(last.conditions ?? []), leaf];
+    filter.conditions = last.conditions ?? [];
+  }
+
+  return { parent, related: [...groups.values()] };
 }
 
 export function searchOffFromImport(imported: ImportOk, selected: string[]): Set<string> {

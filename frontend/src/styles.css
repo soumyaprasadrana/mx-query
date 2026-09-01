@@ -283,6 +283,41 @@ html[data-studio="builder"] .atmosphere { opacity: 0.55; }
   padding: 0;
   flex: 1 1 0;
 }
+.logic-resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 12;
+  width: 8px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+.logic-resize::after {
+  content: "";
+  position: absolute;
+  top: 12%;
+  bottom: 12%;
+  left: 3px;
+  width: 2px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--border) 80%, transparent);
+}
+.logic-resize:hover::after,
+.logic-resize.dragging::after {
+  background: var(--accent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.builder-body.logic-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+.builder-body.logic-resizing * {
+  cursor: col-resize !important;
+}
 .logic-col-head {
   flex-shrink: 0;
   display: flex;
@@ -1203,6 +1238,46 @@ input[type="text"].results-search-input:focus {
   font-size: 0.78rem;
 }
 .import-dialog.shake { animation: importShake 0.45s ease; }
+
+.excel-export-dialog { width: min(560px, 100%); max-height: min(86vh, 720px); overflow: auto; }
+.excel-opt {
+  margin: 14px 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.excel-opt legend {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 0 6px;
+}
+.excel-opt label,
+.excel-check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 8px;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+.excel-check { margin: 8px 2px 0; }
+.excel-check input:disabled {
+  opacity: 0.45;
+}
+.excel-preview {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--code-bg);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  overflow: auto;
+}
 @keyframes importShake {
   0%, 100% { transform: translateX(0); }
   20% { transform: translateX(-8px); }
@@ -1578,6 +1653,62 @@ button.path-chip span[role="button"]:hover { opacity: 1; color: var(--danger); }
   border-radius: 10px 10px 0 0;
 }
 .child-block-body { padding: 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px; overflow: visible; }
+.child-limit-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+}
+.child-limit-field {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-solid);
+  overflow: hidden;
+}
+.child-limit-prefix {
+  padding: 0 10px;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  border-right: 1px solid var(--border);
+  line-height: 36px;
+}
+.child-limit-field input {
+  width: 64px;
+  height: 34px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  font-variant-numeric: tabular-nums;
+}
+.child-limit-field input:focus {
+  outline: none;
+  box-shadow: none;
+}
+.child-limit-field input:disabled {
+  opacity: 0.45;
+}
+.child-limit-nocap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  margin: 0;
+}
+.child-limit-nocap.on {
+  color: var(--accent);
+  font-weight: 600;
+}
+.child-limit-hint {
+  flex: 1 1 100%;
+  margin: 0;
+}
 .hop-fields {
   max-height: 160px !important;
   overflow-y: auto;

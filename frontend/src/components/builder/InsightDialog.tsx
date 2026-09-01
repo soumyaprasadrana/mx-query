@@ -253,6 +253,11 @@ export default function InsightDialog({
                   return (
                     <li key={i}>
                       <div className="mono">{path.filter(Boolean).join(" -> ")}</div>
+                      {c.noLimit ? (
+                        <span className="muted">noLimit</span>
+                      ) : c.limit != null ? (
+                        <span className="muted">limit {String(c.limit)}</span>
+                      ) : null}
                       {c.where != null && (
                         <pre className="insight-pre">
                           {typeof c.where === "string" ? c.where : JSON.stringify(c.where, null, 2)}

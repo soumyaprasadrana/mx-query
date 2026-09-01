@@ -29,6 +29,12 @@ export function chipsFromImport(h: ImportOk): FlightChip[] {
     });
   }
   if (h.where.length) chips.push({ id: "where", label: `${h.where.length} where`, target: "where" });
+  if (h.relatedWhere?.length) {
+    for (const filter of h.relatedWhere.slice(0, 3)) {
+      const name = filter.hops.map((hop) => hop.relationship).filter(Boolean).join(" -> ");
+      if (name) chips.push({ id: `rw-${name}`, label: name, target: "where" });
+    }
+  }
   for (const chain of h.chains.slice(0, 4)) {
     const name = chain.hops.map((hop) => hop.relationship).join(" -> ");
     if (name) chips.push({ id: `c-${name}`, label: name, target: "child" });

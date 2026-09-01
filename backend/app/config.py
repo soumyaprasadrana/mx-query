@@ -1,4 +1,4 @@
-"""Backend settings — single `get_settings()` accessor, no raw `os.environ` reads
+"""Backend settings - single `get_settings()` accessor, no raw `os.environ` reads
 elsewhere (mirrors `maximo-playbook-platform`'s convention)."""
 from __future__ import annotations
 
@@ -10,17 +10,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="MQB_", env_file=".env", extra="ignore")
 
-    # `app_name` is public-facing now (GET /api/version, shown in the UI) —
+    # `app_name` is public-facing now (GET /api/version, shown in the UI) -
     # the product's actual name, not the internal package/repo name.
     app_name: str = "mxQuery"
-    app_version: str = "1.3.0"
+    app_version: str = "1.4.0"
     api_prefix: str = "/api"
     serve_frontend: bool = True
 
     log_level: str = "info"
 
     # AES-256-GCM key for tenant API-key-at-rest encryption (see crypto.py). Blank
-    # falls back to a machine-local key — fine for single-user dev, must be set
+    # falls back to a machine-local key - fine for single-user dev, must be set
     # explicitly for any shared/production deployment.
     session_encryption_key: str = ""
 
@@ -28,14 +28,14 @@ class Settings(BaseSettings):
     tenant_data_root: str = "./data/tenants"
     tenant_db_path: str = "./data/tenants.db"
 
-    # maximo-mcp-server spawn target. Pinned to 1.4.6 (public npm release —
+    # maximo-mcp-server spawn target. Pinned to 1.4.6 (public npm release -
     # confirmed published: `npm view @soumyaprasadrana/maximo-mcp-server versions`
     # includes 1.4.6). Docs-only patch per the package maintainer (a stale/
-    # incorrect README section fixed) — no tool/schema/behavior change.
+    # incorrect README section fixed) - no tool/schema/behavior change.
     # Checked, not just taken on faith: `npm view ...@1.4.5 readme` vs
     # `...@1.4.6 readme` came back byte-identical, so whatever was fixed isn't
     # in the field `npm view readme` surfaces (could be CHANGELOG.md or a
-    # section that normalized to the same text) — flagging that rather than
+    # section that normalized to the same text) - flagging that rather than
     # asserting a diff I couldn't actually see. No `client.py` changes.
     #
     # Previously pinned 1.4.5, which added a parent-level
@@ -45,10 +45,18 @@ class Settings(BaseSettings):
     mcp_npm_spec: str = "@soumyaprasadrana/maximo-mcp-server@1.4.6"
     # Escape hatch for local dev: `node <mcp_cli_path> <flags>` instead of npx.
     mcp_cli_path: str = ""
+    # Skip the shutil.which-based global-install detection entirely and
+    # always resolve via npx, even if a binary matching the pinned version
+    # is on PATH. The version check in mcp/client.py already refuses a
+    # mismatched global install on its own, but a dev machine that has
+    # ever run `npm install -g` for this package - matching version or
+    # not - is exactly the situation this exists to sidestep outright,
+    # rather than trust per-invocation version detection.
+    mcp_force_npx: bool = False
 
     # Two different guards on the metadata-sync wait loop (manager.py's
     # _load): mcp_warmup_stall_timeout_s is the one that actually matters day
-    # to day — error out only once the sync has reported no change (same
+    # to day - error out only once the sync has reported no change (same
     # stage, object count, and percentage) for this long, which is a real
     # sign it's stuck regardless of how large the tenant's Maximo instance
     # is. mcp_warmup_timeout_s is just an outer sanity ceiling for a sync
@@ -67,7 +75,7 @@ class Settings(BaseSettings):
 
     # Assist inference now goes through `app/llm/client.py` (litellm), not a
     # hardcoded Ollama pipe. This is the operator's deploy-time DEFAULT
-    # provider (set via env, e.g. in docker-compose) — a customer can
+    # provider (set via env, e.g. in docker-compose) - a customer can
     # override it at runtime from the admin-gated Settings screen, which
     # stores its own encrypted-at-rest row in the `llm_config` table
     # (db.get_llm_config wins over these defaults when present; see
@@ -86,10 +94,10 @@ class Settings(BaseSettings):
 
     # Gates the admin-only LLM Settings screen (POST /api/admin/login) and
     # the config-write endpoints (PUT/DELETE /api/llm/config, .../test).
-    # Blank disables admin login entirely — the app still works, but the LLM
+    # Blank disables admin login entirely - the app still works, but the LLM
     # config can then only be set via these env vars (no UI path exists to
     # change it), which is intentional: no password configured = no login
-    # surface to attack. Single shared operator secret, not a user table —
+    # surface to attack. Single shared operator secret, not a user table -
     # this app has one admin, not many (see docs/DECISIONS.md MQB-006).
     admin_password: str = ""
     admin_session_ttl_s: float = 43200.0  # 12h sliding idle window
@@ -98,7 +106,7 @@ class Settings(BaseSettings):
     # server-side message history (app/llm/sessions.py) instead of each step
     # starting a fresh 2-message exchange with no memory of earlier picks.
     # Idle-reaped the same way as the MCP warm-client pool (mcp_warm_idle_s
-    # above) — "a wizard session," not a durable record, so a short idle
+    # above) - "a wizard session," not a durable record, so a short idle
     # window is correct, not a bug. `assist_session_max_turns` bounds how
     # many past turns get replayed into every new call (context size/cost),
     # trimming oldest first.

@@ -1,6 +1,28 @@
-/** SVG hop graph for the insight dialog. */
-import { useMemo } from "react";
+/** SVG hop graph for the insight dialog. PNG export is for the full scrollable map. */
+import { useMemo, useRef, useState } from "react";
 import { buildQueryGraph, layoutQueryGraph } from "../../lib/queryGraph";
+import { Icon, faDownload } from "../Icon";
+
+async function pngOf(el: HTMLElement): Promise<string> {
+  const { toPng } = await import("html-to-image");
+  const prevMax = el.style.maxHeight;
+  const prevOverflow = el.style.overflow;
+  el.style.maxHeight = "none";
+  el.style.overflow = "visible";
+  try {
+    const bg = getComputedStyle(el).backgroundColor || "#ffffff";
+    return await toPng(el, {
+      pixelRatio: 2,
+      cacheBust: true,
+      backgroundColor: bg,
+      width: Math.max(el.scrollWidth, el.clientWidth),
+      height: Math.max(el.scrollHeight, el.clientHeight),
+    });
+  } finally {
+    el.style.maxHeight = prevMax;
+    el.style.overflow = prevOverflow;
+  }
+}
 
 export default function QueryGraph({
   osName,
@@ -27,11 +49,45 @@ export default function QueryGraph({
   }, [osName, selectFields, whereConds, rawWhere, oslcWhere, childOptions, joins]);
 
   const byId = useMemo(() => new Map(laid.nodes.map((n) => [n.id, n])), [laid.nodes]);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [saving, setSaving] = useState(false);
 
   if (!laid.nodes.length) return null;
 
+  async function savePng() {
+    const el = wrapRef.current;
+    if (!el || saving) return;
+    setSaving(true);
+    try {
+      const url = await pngOf(el);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${osName || "query"}-graph.png`;
+      a.click();
+    } catch (err) {
+      console.error("graph png failed", err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
-    <div className="qgraph" style={{ minHeight: laid.height }}>
+    <div>
+      <div className="spread" style={{ marginBottom: 8 }}>
+        <span className="muted" style={{ fontSize: "0.75rem" }}>
+          Scroll the map. JOIN is MAXRELATIONSHIP. ROW trims the child array, not the parent.
+        </span>
+        <button
+          type="button"
+          className="ghost copy-btn"
+          onClick={() => void savePng()}
+          disabled={saving}
+          title="Export the full scrollable graph, not the clipped viewport"
+        >
+          <Icon icon={faDownload} /> {saving ? "PNG..." : "PNG"}
+        </button>
+      </div>
+      <div ref={wrapRef} className="qgraph" data-tour="qgraph" style={{ minHeight: laid.height }}>
       <svg
         className="qgraph-edges"
         width={laid.width}
@@ -132,6 +188,7 @@ export default function QueryGraph({
           })}
         </article>
       ))}
+    </div>
     </div>
   );
 }

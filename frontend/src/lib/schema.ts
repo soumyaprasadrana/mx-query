@@ -495,6 +495,26 @@ export function relatedWhereConditions(filters: RelatedWhere[], mode?: Condition
   return out;
 }
 
+/** MCP nested-fetch default; omitting it logs a warning and still caps at 50. */
+export const DEFAULT_CHILD_LIMIT = 50;
+
+export function childLimitOf(hop: Pick<ChildHop, "limit">): number {
+  const n = hop.limit;
+  if (typeof n === "number" && Number.isFinite(n) && n > 0) return Math.floor(n);
+  return DEFAULT_CHILD_LIMIT;
+}
+
+export function withChildOptionLimit(opt: Record<string, unknown>): Record<string, unknown> {
+  if (opt.noLimit === true || opt.noLimit === "true" || opt.noLimit === 1) {
+    const next: Record<string, unknown> = { ...opt, noLimit: true };
+    delete next.limit;
+    return next;
+  }
+  const n = Number(opt.limit);
+  if (Number.isFinite(n) && n > 0) return { ...opt, limit: Math.floor(n) };
+  return { ...opt, limit: DEFAULT_CHILD_LIMIT };
+}
+
 export function emptyHop(rel: ChildRel | undefined): ChildHop {
   return {
     relationship: rel?.relation ?? "",
@@ -507,6 +527,7 @@ export function emptyHop(rel: ChildRel | undefined): ChildHop {
     inOs: rel?.inOs,
     useRel: rel?.inOs && relNamesMatch(rel.relation, rel.objectName) ? false : undefined,
     whereClause: rel?.whereClause,
+    limit: DEFAULT_CHILD_LIMIT,
   };
 }
 
@@ -646,7 +667,6 @@ export function childOptionsFromChains(chains: ChildChain[], mode?: ConditionMod
       const conditions = hop.conditions.filter((c) => c.field).map((c) => toCondition(c, mode));
       const diw = serializeDomainInternal(hop.domainInternal);
       const readyTl = timelineReady(hop.timeline);
-      if (!conditions.length && !readyTl && !diw) continue;
       const payload: Record<string, unknown> = { relationship: hop.relationship };
       if (conditions.length) {
         payload.where = { conditions };
@@ -658,6 +678,8 @@ export function childOptionsFromChains(chains: ChildChain[], mode?: ConditionMod
       }
       if (diw) payload.domaininternalwhere = diw;
       if (names.length > 1) payload.path = [...names];
+      if (hop.noLimit) payload.noLimit = true;
+      else payload.limit = childLimitOf(hop);
       out.push(payload);
     }
   }
@@ -923,7 +945,7 @@ export function flattenNestedRows(rows: Record<string, unknown>[]): Record<strin
     for (const row of list) {
       const current = { ...inherited };
       for (const [k, v] of Object.entries(row)) {
-        if (isInternalField(k) || isChildArray(v)) continue;
+        if (isInternalField(k) || isRelatedValue(v)) continue;
         current[prefix ? `${prefix}.${k}` : k] = v;
       }
       const kids = childCollections(row);

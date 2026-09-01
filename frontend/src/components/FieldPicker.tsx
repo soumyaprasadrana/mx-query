@@ -61,7 +61,9 @@ export default function FieldPicker({
     <div className="fpick" ref={wrap}>
       <button type="button" className="fpick-btn" disabled={disabled} onClick={() => setOpen((v) => !v)}>
         {current && <span className="type-dot" style={{ background: accentForType(current.type, current.subType) }} />}
-        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>{value || "field"}</span>
+        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }} title={value || undefined}>
+          {value || "field"}
+        </span>
       </button>
       {open &&
         createPortal(

@@ -1,13 +1,14 @@
 /** Execute output: table, JSON, charts, searchTerms. */
 import { lazy, Suspense, useEffect, useMemo, useState, CSSProperties } from "react";
 import { LoadMeta } from "../../types";
-import { applyDisplayFlatten, childCollections, flattenNestedRows, rowsToCsv, scalarColumnsFor, DisplaySpec } from "../../lib/schema";
+import { applyDisplayFlatten, childCollections, scalarColumnsFor, DisplaySpec } from "../../lib/schema";
 import { ReportField, ReportSpec, isReportEmpty } from "../../lib/resultReport";
 import { highlightJson, paramColor, parseQueryParams, splitEndpoint } from "../../lib/highlight";
 import { AppliedStyle, TableView, cellStyle, columnLabel, emptyTableView, orderedColumns, rowStyle } from "../../lib/tableView";
 
 const ResultReport = lazy(() => import("./ResultReport"));
-import { Icon, faCopy, faFloppyDisk, faMagnifyingGlass } from "../Icon";
+import { Icon, faCopy, faFloppyDisk, faFileExcel, faMagnifyingGlass } from "../Icon";
+import ExcelExportDialog from "./ExcelExportDialog";
 
 function paint(style?: AppliedStyle): CSSProperties | undefined {
   if (!style) return undefined;
@@ -290,6 +291,7 @@ export default function ResultPanel({
 }) {
   const [expandAll, setExpandAll] = useState(false);
   const [maximized, setMaximized] = useState(false);
+  const [excelOpen, setExcelOpen] = useState(false);
   const view = tableView ?? emptyTableView();
 
   useEffect(() => {
@@ -410,10 +412,11 @@ export default function ResultPanel({
                   </button>
                   <button
                     className="ghost copy-btn"
-                    title="One Excel row per leaf; parent fields repeat, child fields use dotted paths"
-                    onClick={() => download("results.csv", rowsToCsv(flattenNestedRows(display.rows)), "text/csv")}
+                    title="Download an mxQuery Result Set workbook"
+
+                    onClick={() => setExcelOpen(true)}
                   >
-                    CSV
+                    <Icon icon={faFileExcel} /> Excel
                   </button>
                   {!reportOnly && (
                     <button className="ghost copy-btn" onClick={() => setMaximized((v) => !v)}>
@@ -496,6 +499,15 @@ export default function ResultPanel({
           <div className="empty-hint" style={{ margin: 12 }}>No rows yet.</div>
         )}
       </div>
+      {excelOpen && (
+        <ExcelExportDialog
+          rows={rows}
+          osName={typeof builtArgs?.osName === "string" ? builtArgs.osName : undefined}
+          title={view.header.trim() || undefined}
+          totalCount={meta?.totalCount}
+          onClose={() => setExcelOpen(false)}
+        />
+      )}
     </>
   );
 }
