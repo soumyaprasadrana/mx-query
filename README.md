@@ -12,12 +12,19 @@
 </p>
 
 <p align="center">
+  <img src="docs-site/docs/public/og.png" alt="mxQuery flow: search OS, load schema, hop and filter, then the Maximo OSLC GET URL. Stack: Browser to mxQuery to maximo-mcp-server to Maximo." width="800" />
+</p>
+
+<p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="Apache-2.0" /></a>
+  <a href="https://github.com/soumyaprasadrana/mx-query/releases/latest"><img src="https://img.shields.io/github/v/release/soumyaprasadrana/mx-query?label=release" alt="Latest release" /></a>
+  <a href="https://hub.docker.com/r/soumyaprasadrana/mx-query"><img src="https://img.shields.io/docker/v/soumyaprasadrana/mx-query?label=docker&logo=docker" alt="Docker" /></a>
   <a href="backend/pyproject.toml"><img src="https://img.shields.io/badge/python-3.11%2B-3776AB.svg" alt="Python 3.11+" /></a>
   <a href="frontend/package.json"><img src="https://img.shields.io/badge/node-20%2B-339933.svg" alt="Node 20+" /></a>
   <a href="https://github.com/soumyaprasadrana/mx-query/actions/workflows/frontend.yml"><img src="https://github.com/soumyaprasadrana/mx-query/actions/workflows/frontend.yml/badge.svg" alt="Frontend CI" /></a>
   <a href="https://github.com/soumyaprasadrana/mx-query/actions/workflows/backend.yml"><img src="https://github.com/soumyaprasadrana/mx-query/actions/workflows/backend.yml/badge.svg" alt="Backend CI" /></a>
   <a href="https://soumyaprasadrana.github.io/mx-query/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-7C3AED.svg" alt="Documentation" /></a>
+  <a href="https://github.com/soumyaprasadrana/maximo-mcp-server"><img src="https://img.shields.io/badge/mcp-maximo--mcp--server-7C3AED.svg" alt="maximo-mcp-server" /></a>
 </p>
 
 Connect a Maximo instance, pick an object structure, add fields and filters, and run the query. The browser talks to [`maximo-mcp-server`](https://github.com/soumyaprasadrana/maximo-mcp-server) through a small Python proxy. It does not rebuild Maximo's query language in JavaScript.
@@ -43,6 +50,20 @@ Not in this release: nested `childSelects` / `rel.` column picking, and create/u
 ## Quick start
 
 You need a Maximo instance reachable over HTTPS and an API key for that instance.
+
+### Deploy the MAXMCPMETADATA automation script (mandatory)
+
+The metadata engine requires this script to extract object and attribute metadata from Maximo. Without it the server starts, but metadata sync fails and every tool call returns `metadata_sync_in_progress`.
+
+- Script name: `MAXMCPMETADATA`
+- Source: `https://raw.githubusercontent.com/soumyaprasadrana/maximo-mcp-server/refs/heads/main/MAXMCPMETADATA.py`
+
+Deploy steps in Maximo Administration:
+
+1. Go to System Configuration -> Platform Configuration -> Automation Scripts
+2. Create a new script named `MAXMCPMETADATA`
+3. Paste the content from the URL above
+4. Activate the script - this is mandatory, otherwise metadata can never be retrieved
 
 ### Docker
 
