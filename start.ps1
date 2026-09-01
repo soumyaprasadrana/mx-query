@@ -11,7 +11,7 @@
 
 .PARAMETER Reload
     Pass to auto-restart uvicorn on source changes (backend dev convenience;
-    does not rebuild the frontend on frontend source changes — use
+    does not rebuild the frontend on frontend source changes - use
     `npm run dev` in frontend/ for that instead).
 
 .PARAMETER SkipFrontendBuild
@@ -48,8 +48,13 @@ if (-not $?) { throw "pip install failed" }
 
 # Single-deployable mode: the backend serves frontend/dist itself
 # (app.py's _mount_frontend). Build it unless the caller opts out (e.g. a
-# `npm run dev` + Vite proxy workflow instead).
-if (-not $SkipFrontendBuild) {
+# `npm run dev` + Vite proxy workflow instead), or this is the release zip
+# (frontend/dist already built in, no frontend/src to build from - no Node
+# needed at all in that case).
+$isPrebuiltBundle = (Test-Path (Join-Path $frontend "dist")) -and -not (Test-Path (Join-Path $frontend "src"))
+if ($isPrebuiltBundle) {
+    Write-Host "Prebuilt frontend/dist found - skipping the Node build step."
+} elseif (-not $SkipFrontendBuild) {
     if (-not (Test-Path (Join-Path $frontend "node_modules"))) {
         Write-Host "Installing frontend dependencies ..."
         Push-Location $frontend

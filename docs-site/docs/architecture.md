@@ -35,7 +35,7 @@ Unknown paths fall through to `index.html` (backend `_mount_frontend`; Vite in d
 ```json
 {
   "name": "mxQuery",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "mcpServer": {
     "package": "@soumyaprasadrana/maximo-mcp-server",
     "version": "1.4.6"

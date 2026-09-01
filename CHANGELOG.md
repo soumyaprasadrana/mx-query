@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.4.1
+
+- Docs: README and the docs site now lead with a "set up the tenant from
+  the CLI, then start the app" order for both Docker and local installs,
+  instead of only documenting the in-browser wizard
+- Docs: explained why `MQB_SESSION_ENCRYPTION_KEY` must be set explicitly
+  (and identical) across a `docker run add-tenant` and the running server
+  container - the machine-derived fallback key is a container's own
+  random hostname, so two separate `docker run` invocations get two
+  different keys and the server can never decrypt what the CLI encrypted.
+  Documented that this is specifically a Docker/multi-container concern -
+  a local, non-Docker install's fallback key is stable (the one real
+  machine hostname), so it works across repeated runs without this
+  particular failure mode
+- Documented the previously-undocumented `MQB_MCP_FORCE_NPX` setting
+- Release: the GitHub Release asset is now `mxQuery-<version>.zip` (was
+  `mxquery-frontend-<tag>.zip`), containing backend source plus the
+  already-built frontend, for someone who wants a local install without
+  `git clone` or Node. `start.ps1`/`start.sh` detect a prebuilt
+  `frontend/dist` with no `frontend/src` alongside it and skip the Node
+  build step in that case - verified end to end (real venv creation, real
+  server start, `/api/health`, `/api/version`, and static asset serving
+  all correct) against a locally assembled copy of this exact bundle
+  layout before shipping
+
 ## 1.4.0
 
 - Add Excel export of results (ExcelJS) from the builder's results table.

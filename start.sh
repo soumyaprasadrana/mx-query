@@ -25,7 +25,7 @@ if [ -f "$VENV/Scripts/python.exe" ]; then
 elif [ -f "$VENV/bin/python" ]; then
     PY="$VENV/bin/python"
 else
-    echo "No venv found — creating one at $VENV ..."
+    echo "No venv found - creating one at $VENV ..."
     python -m venv "$VENV"
     if [ -f "$VENV/Scripts/python.exe" ]; then PY="$VENV/Scripts/python.exe"; else PY="$VENV/bin/python"; fi
     "$PY" -m pip install -q --upgrade pip
@@ -34,7 +34,11 @@ fi
 echo "Installing/updating backend dependencies ..."
 "$PY" -m pip install -q -e "$BACKEND[dev]"
 
-if [ "${SKIP_FRONTEND_BUILD:-}" != "1" ]; then
+# Release zip ships frontend/dist prebuilt with no frontend/src - skip the
+# Node build step entirely in that case (no Node needed at all to run it).
+if [ -d "$FRONTEND/dist" ] && [ ! -d "$FRONTEND/src" ]; then
+    echo "Prebuilt frontend/dist found - skipping the Node build step."
+elif [ "${SKIP_FRONTEND_BUILD:-}" != "1" ]; then
     if [ ! -d "$FRONTEND/node_modules" ]; then
         echo "Installing frontend dependencies ..."
         (cd "$FRONTEND" && npm install)
